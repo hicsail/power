@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-test_power
+test_powergrid
 ----------------------------------
 
-Tests for `power` module.
+Tests for `powergrid` module.
 """
 
 import unittest
 
-from power import power
+from powergrid import powergrid
 
 
-class TestPower(unittest.TestCase):
+class TestPowerGrid(unittest.TestCase):
 
     def setUp(self):
         pass
