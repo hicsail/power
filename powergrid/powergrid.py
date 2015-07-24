@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import numpy as np
 
 # Python with COM requires the pyWin32 extensions
 import win32com.client
@@ -9,7 +10,8 @@ from win32com.client import VARIANT
 import pythoncom
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-object = win32com.client.Dispatch('pwrworld.SimulatorAuto')
+# Create PowerWorld COM object
+par_sim_auto = win32com.client.Dispatch('pwrworld.SimulatorAuto')
 
 # The following function will determine if any errors are returned and print an appropriate message.
 def check_result_for_error(sim_auto_output, message):
@@ -17,25 +19,26 @@ def check_result_for_error(sim_auto_output, message):
         print('Error: ' + sim_auto_output[0])
     else:
         print message
+        return sim_auto_output
 
-filename = current_dir + '\\resources\\B7FLAT.pwb'
-check_result_for_error(object.OpenCase(filename), 'Case Open')
-object_type = 'GEN'
+# Load sample case
+filename = current_dir + '\\resources\\sampleCase.pwb'
 
-# VARIANT is needed if passing in array of arrays. BOTH the field list
-# and the value list must use this syntax. If not passing in arrays of arrays, the
-# standard list format can be used. Passing out arrays of arrays from SimAuto in the
-# output parameter seems to work OK with Python.
+# initializePWCase
+check_result_for_error(par_sim_auto.OpenCase(filename), 'Case Open')
+check_result_for_error(par_sim_auto.RunScriptCommand('EnterMode(RUN)'), 'Enter Mode RUN')
 
-field_array = VARIANT(pythoncom.VT_VARIANT | pythoncom.VT_ARRAY, ['BushNum', 'GenID', 'GenMW', 'GenAGCAble'])
-all_value_array = [None] * 2
-all_value_array[0] = VARIANT(pythoncom.VT_VARIANT | pythoncom.VT_ARRAY, [1, "1", 300, "NO"])
-all_value_array[1] = VARIANT(pythoncom.VT_VARIANT | pythoncom.VT_ARRAY, [2, "1", 1400, "NO"])
+# Save state from before we switch
+check_result_for_error(par_sim_auto.SaveState(), 'Save State')
 
-check_result_for_error(object.ChangeParametersMultipleElement('GEN', field_array, all_value_array), 'Do Change')
+# Run OPF
+check_result_for_error(par_sim_auto.RunScriptCommand('SolvePrimalLP'), 'Solve Primal LP')
 
-filename = current_dir + '\\resources\\B7FLAT_changed.pwb'
-check_result_for_error(object.SaveCase(filename, 'PWB', True), 'Save case')
+# getBranchState
+change_status_field_array = VARIANT(pythoncom.VT_VARIANT | pythoncom.VT_ARRAY, ['busnum', 'busnum:1', 'LineCircuit', 'LineStatus'])
+output_lines = check_result_for_error(par_sim_auto.GetParametersMultipleElement('Branch', change_status_field_array, ' '), 'Branch')
+output_lines = np.array(output_lines[1]).T
+output_flattened = output_lines.flatten()
 
-del object
-object = None
+del par_sim_auto
+par_sim_auto = None
