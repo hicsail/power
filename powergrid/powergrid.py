@@ -2,7 +2,6 @@
 
 import os
 import numpy as np
-import multiprocessing as mp
 import timeit
 
 # Python with COM requires the pyWin32 extensions
@@ -10,9 +9,13 @@ import win32com.client
 from win32com.client import VARIANT
 
 import pythoncom
+from Queue import Queue
+from threading import Thread
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 filename = current_dir + '\\resources\\sampleCase.pwb'
+pw_objects = Queue()
+max_objects = 2
 
 # The following function will determine if any errors are returned and print an appropriate message.
 def check_result_for_error(sim_auto_output, message):
@@ -26,24 +29,49 @@ results = []
 def log_result(result):
     results.append(result)
 
-def serial():
-    for i in range(2):
-        log_result(load_sample_case())
 
-def multiprocess(processes):
-    # Create pool of x processes
-    pool = mp.Pool(processes=processes)
-    for i in range(2):
-        # Spawn processes immediately without waiting for old one ot finish
-        pool.apply_async(load_sample_case, args=(), callback=log_result)
-    pool.close()
-    pool.join()
-    # print(results)
+def create_pw_pool():
+    for i in range(max_objects):
+        pw = win32com.client.Dispatch('pwrworld.SimulatorAuto')
+        pw_stream = pythoncom.CreateStreamOnHGlobal()
+        pythoncom.CoMarshalInterface(pw_stream,
+                                     pythoncom.IID_IDispatch,
+                                     pw._oleobj_,
+                                     pythoncom.MSHCTX_LOCAL,
+                                     pythoncom.MSHLFLAGS_TABLESTRONG)
+        pw = None
+        pw_objects.put(pw_stream)
+
+def multiprocess(threads):
+    for i in range(threads):
+        worker = Thread(target=load_sample_case, args=(i, pw_objects,))
+        worker.start()
+    worker.join()
+
+    clean_pw_queue()
+    print '*** Done'
 
 
-def load_sample_case():
-    # Create PowerWorld COM object
-    par_sim_auto = win32com.client.Dispatch('pwrworld.SimulatorAuto')
+def clean_pw_queue():
+    while not pw_objects.empty():
+        pw = pw_objects.get()
+        pythoncom.CoReleaseMarshalData(pw)
+        pw = None
+        pw_objects.task_done()
+    pw_objects.mutex.acquire()
+    pw_objects.queue.clear()
+    pw_objects.all_tasks_done.notify_all()
+    pw_objects.unfinished_tasks = 0
+    pw_objects.mutex.release()
+
+
+def load_sample_case(i, q):
+    print '%s: Starting new thread' % i
+    pythoncom.CoInitialize()
+    pw_stream = q.get()
+    pw_stream.Seek(0, 0)
+    pw_interface = pythoncom.CoUnmarshalInterface(pw_stream, pythoncom.IID_IDispatch)
+    par_sim_auto = win32com.client.Dispatch(pw_interface)
 
     # initializePWCase
     check_result_for_error(par_sim_auto.OpenCase(filename), 'Case Open')
@@ -61,17 +89,21 @@ def load_sample_case():
     output_lines = np.array(output_lines[1]).T
     output_flattened = output_lines.flatten()
 
-    par_sim_auto = None
-    del par_sim_auto
+    log_result(output_flattened)
 
-    return output_flattened
+    pw_stream.Seek(0, 0)
+    q.put(pw_stream)
+    q.task_done()
+    pythoncom.CoUninitialize()
+
 
 benchmarks = []
 
 if __name__ == '__main__':
+    benchmarks.append(timeit.Timer('create_pw_pool()', 'from __main__ import create_pw_pool').timeit(number=1))
     # benchmarks.append(timeit.Timer('serial()', 'from __main__ import serial').timeit(number=1))
     # benchmarks.append(timeit.Timer('multiprocess(1)', 'from __main__ import multiprocess').timeit(number=1))
-    benchmarks.append(timeit.Timer('multiprocess(2)', 'from __main__ import multiprocess').timeit(number=1))
+    benchmarks.append(timeit.Timer('multiprocess(4)', 'from __main__ import multiprocess').timeit(number=1))
     # benchmarks.append(timeit.Timer('multiprocess(3)', 'from __main__ import multiprocess').timeit(number=1))
     # benchmarks.append(timeit.Timer('multiprocess(4)', 'from __main__ import multiprocess').timeit(number=1))
     print(benchmarks)
