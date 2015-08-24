@@ -32,14 +32,19 @@ def log_result(result):
 
 def create_pw_pool():
     for i in range(max_objects):
+        # Create COM object
         pw = win32com.client.Dispatch('pwrworld.SimulatorAuto')
+        # Create stream that will hold COM object
         pw_stream = pythoncom.CreateStreamOnHGlobal()
+        # Convert COM object into stream to allow re-usage
         pythoncom.CoMarshalInterface(pw_stream,
                                      pythoncom.IID_IDispatch,
                                      pw._oleobj_,
                                      pythoncom.MSHCTX_LOCAL,
                                      pythoncom.MSHLFLAGS_TABLESTRONG)
+        # No need for the COM reference anymore now that it's a stream
         pw = None
+        # Store the stream in a queue
         pw_objects.put(pw_stream)
 
 def multiprocess(threads):
@@ -67,33 +72,45 @@ def clean_pw_queue():
 
 def load_sample_case(i, q):
     print '%s: Starting new thread' % i
+    # Enable COM object access in this thread, but not others
     pythoncom.CoInitialize()
+    # Get stream reference from queue
     pw_stream = q.get()
+    # Make sure we're at the start of the stream, reset the pointer
     pw_stream.Seek(0, 0)
+    # Unmarshal the stream, going back to the original interface
     pw_interface = pythoncom.CoUnmarshalInterface(pw_stream, pythoncom.IID_IDispatch)
-    par_sim_auto = win32com.client.Dispatch(pw_interface)
+    # And finally return the COM object that was created earlier
+    pw = win32com.client.Dispatch(pw_interface)
 
     # initializePWCase
-    check_result_for_error(par_sim_auto.OpenCase(filename), 'Case Open')
-    check_result_for_error(par_sim_auto.RunScriptCommand('EnterMode(RUN)'), 'Enter Mode RUN')
+    check_result_for_error(pw.OpenCase(filename), 'Case Open')
+    check_result_for_error(pw.RunScriptCommand('EnterMode(RUN)'), 'Enter Mode RUN')
 
     # Save state from before we switch
-    check_result_for_error(par_sim_auto.SaveState(), 'Save State')
+    check_result_for_error(pw.SaveState(), 'Save State')
 
     # Run OPF
-    check_result_for_error(par_sim_auto.RunScriptCommand('SolvePrimalLP'), 'Solve Primal LP')
+    check_result_for_error(pw.RunScriptCommand('SolvePrimalLP'), 'Solve Primal LP')
 
     # getBranchState
     change_status_field_array = VARIANT(pythoncom.VT_VARIANT | pythoncom.VT_ARRAY, ['busnum', 'busnum:1', 'LineCircuit', 'LineStatus'])
-    output_lines = check_result_for_error(par_sim_auto.GetParametersMultipleElement('Branch', change_status_field_array, ' '), 'Branch')
+    output_lines = check_result_for_error(pw.GetParametersMultipleElement('Branch', change_status_field_array, ' '), 'Branch')
     output_lines = np.array(output_lines[1]).T
     output_flattened = output_lines.flatten()
 
     log_result(output_flattened)
 
+    # Revert stream back to start position
     pw_stream.Seek(0, 0)
+    # Return stream back to queue
     q.put(pw_stream)
+    # Indicate all work on this queue object is done. Without this the queue task counter would go up every time a
+    # stream is re-added to the queue
     q.task_done()
+    # Clean up COM reference
+    pw = None
+    # Indicate that no more COM objects will be called in this thread
     pythoncom.CoUninitialize()
 
 
