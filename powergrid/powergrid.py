@@ -45,7 +45,7 @@ def create_pw_pool():
         # No need for the COM reference anymore now that it's a stream
         pw = None
         # Store the stream in a queue
-        pw_objects.put(pw_stream)
+        pw_objects.put((i, pw_stream))
 
 def multiprocess(threads):
     for i in range(threads):
@@ -59,7 +59,7 @@ def multiprocess(threads):
 
 def clean_pw_queue():
     while not pw_objects.empty():
-        pw = pw_objects.get()
+        pw = pw_objects.get()[1]
         pythoncom.CoReleaseMarshalData(pw)
         pw = None
         pw_objects.task_done()
@@ -74,8 +74,12 @@ def load_sample_case(i, q):
     print '%s: Starting new thread' % i
     # Enable COM object access in this thread, but not others
     pythoncom.CoInitialize()
+    # Get tuple of id and stream
+    pw_data = q.get()
+    # Get the ID
+    pw_id = pw_data[0]
     # Get stream reference from queue
-    pw_stream = q.get()
+    pw_stream = pw_data[1]
     # Make sure we're at the start of the stream, reset the pointer
     pw_stream.Seek(0, 0)
     # Unmarshal the stream, going back to the original interface
@@ -104,7 +108,7 @@ def load_sample_case(i, q):
     # Revert stream back to start position
     pw_stream.Seek(0, 0)
     # Return stream back to queue
-    q.put(pw_stream)
+    q.put((pw_id, pw_stream))
     # Indicate all work on this queue object is done. Without this the queue task counter would go up every time a
     # stream is re-added to the queue
     q.task_done()
