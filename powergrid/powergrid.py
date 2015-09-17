@@ -9,7 +9,7 @@ import win32com.client
 from win32com.client import VARIANT
 
 import pythoncom
-from Queue import Queue
+from queue import Queue
 from threading import Thread
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +22,7 @@ def check_result_for_error(sim_auto_output, message):
     if sim_auto_output[0] != '':
         print('Error: ' + sim_auto_output[0])
     else:
-        print message
+        print(message)
         return sim_auto_output
 
 results = []
@@ -54,7 +54,7 @@ def multiprocess(threads):
     worker.join()
 
     clean_pw_queue()
-    print '*** Done'
+    print('*** Done')
 
 
 def clean_pw_queue():
@@ -71,7 +71,7 @@ def clean_pw_queue():
 
 
 def load_sample_case(i, q):
-    print '%s: Starting new thread' % i
+    print('%s: Starting new thread' % i)
     # Enable COM object access in this thread, but not others
     pythoncom.CoInitialize()
     # Get tuple of id and stream
