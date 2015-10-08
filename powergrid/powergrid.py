@@ -1,8 +1,76 @@
 import win32com.client
 from win32com.client import VARIANT
 
+import sys
 import pythoncom
+import queue
 from queue import Queue
+from threading import Thread
+from typing import Sequence, TypeVar
+
+
+class PowerThread(Thread):
+    """
+    A thread that runs indefinitely and uses a queue to obtain more tasks.
+    """
+    T = TypeVar('T', Queue)
+
+    def __init__(self, tasks: Sequence[T], results: Queue, pw_objects: Queue, **kwds):
+        Thread.__init__(self, **kwds)
+        self.setDaemon(1)
+        self._results = results
+        self._pw_objects = pw_objects
+        self._pw_id, self._pw, self._pw_stream = self.marshal_com()
+        self._tasks = tasks
+        self.start()
+
+    def marshal_com(self):
+        # Enable COM object access in this thread, but not others
+        pythoncom.CoInitialize()
+        # Get tuple of id and stream
+        pw_data = self._pw_objects.get()
+        # Get the ID
+        pw_id = pw_data[0]
+        # Get stream reference from queue
+        pw_stream = pw_data[1]
+        # Make sure we're at the start of the stream, reset the pointer
+        pw_stream.Seek(0, 0)
+        # Unmarshal the stream, going back to the original interface
+        pw_interface = pythoncom.CoUnmarshalInterface(pw_stream, pythoncom.IID_IDispatch)
+        # And finally return the COM object that was created earlier
+        pw = win32com.client.Dispatch(pw_interface)
+
+        return pw, pw_id, pw_stream
+
+    def unmarshal_com(self):
+        # Revert stream back to start position
+        self._pw_stream.Seek(0, 0)
+        # Return stream back to queue
+        self._pw_objects.put((self._pw_id, self._pw_stream))
+        # Indicate all work on this queue object is done. Without this the queue task counter would go up every time
+        # a stream is re-added to the queue
+        self._pw_objects.task_done()
+        # Clean up COM reference
+        self._pw = None
+        # Indicate that no more COM objects will be called in this thread
+        pythoncom.CoUninitialize()
+
+    def run(self):
+        while True:
+            try:
+                # Get task with non-blocking Queue call
+                task = self._tasks[self._pw_id].get(False)
+            except queue.Empty:
+                continue
+            else:
+                try:
+                    # Call task function and store results
+                    result = task.callable(*task.args, **task.kwds)
+                    self._results.put((self._pw_id, result))
+                except:
+                    # Or store exception message if something went wrong
+                    self._results.put((self._pw_id, sys.exc_info()))
+
 
 class PowerGrid:
     def __init__(self, _num_threads):
