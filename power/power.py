@@ -107,15 +107,18 @@ class Power:
         for i in range(self._num_threads):
             self._threads.append(PowerThread(self._tasks, self._results, self._pw_objects))
 
-    def threaded(self, f, daemon=False):
-        def wrapped(*args, **kwargs):
-            results = Queue()
+    def add_task(self, f: Callable, threads: str, callback: Callable, *args, **kwargs):
+        for i in self._parse_thread_list(threads):
+            self._tasks[i].put(PowerTask(f, callback, i, *args, **kwargs))
 
-            self.result_queue = results
-
-            return self.result_queue
-
-        return wrapped
+    def poll(self, block=False):
+        while True:
+            try:
+                task, result = self._results.get(block=block)
+                if task.callback:
+                    task.callback(task, result)
+            except queue.Empty:
+                break
 
     def reset(self):
         for i in range(self._num_threads):
@@ -129,6 +132,8 @@ class Power:
             self.tasks[i].all_tasks_done.notify_all()
         self._pw_objects = None
         self._tasks = None
+        # TODO join threads first?
+        self._threads = None
 
         # The queue should be empty at this point, this is a fallback to forcefully clear the queue
         # Doesn't kill COM objects though
@@ -137,3 +142,15 @@ class Power:
         # self._pw_objects.all_tasks_done.notify_all()
         # self._pw_objects.unfinished_tasks = 0
         # self._pw_objects.mutex.release()
+
+    @staticmethod
+    def _parse_thread_list(threads: str) -> List:
+        """
+        Parse string of comma and dash separated values into list that contains individual indexes.
+        For example, '1,2,4-6' becomes [1,2,4,5,6]
+        :param threads: String with comma and dash separated values
+        :return: List with indexes of threads
+        """
+        # See https://stackoverflow.com/a/5705014/4573362
+        ranges = (x.split("-") for x in threads.split(","))
+        return [i for r in ranges for i in range(int(r[0]), int(r[-1]) + 1)]
