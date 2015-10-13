@@ -19,9 +19,9 @@ class PowerThread(Thread):
         Thread.__init__(self, **kwargs)
         self.setDaemon(1)
         self._results = results
-        self._pw_object = pw_objects
-        self._pw_id, self._pw, self._pw_stream = self.marshal_com()
+        self._pw_objects = pw_objects
         self._tasks = tasks
+        self._pw_id, self._pw, self._pw_stream = self.marshal_com()
         self.start()
 
     def marshal_com(self):
@@ -40,7 +40,7 @@ class PowerThread(Thread):
         # And finally return the COM object that was created earlier
         pw = win32com.client.Dispatch(pw_interface)
 
-        return pw, pw_id, pw_stream
+        return pw_id, pw, pw_stream
 
     def unmarshal_com(self):
         # Revert stream back to start position
