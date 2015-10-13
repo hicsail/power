@@ -5,12 +5,12 @@
 test_powergrid
 ----------------------------------
 
-Tests for `powergrid` module.
+Tests for `power` module.
 """
 
 import unittest
 
-from powergrid import powergrid
+from power import power
 
 
 class TestPowerGrid(unittest.TestCase):

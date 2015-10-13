@@ -81,7 +81,7 @@ class PowerTask:
         self.kwargs = kwargs
 
 
-class PowerGrid:
+class Power:
     def __init__(self, _num_threads):
         self._num_threads = _num_threads
         self._pw_objects = Queue()
@@ -131,6 +131,7 @@ class PowerGrid:
             self.tasks[i].all_tasks_done.notify_all()
         self._pw_objects = None
         self._tasks = None
+
         # The queue should be empty at this point, this is a fallback to forcefully clear the queue
         # Doesn't kill COM objects though
         # self._pw_objects.mutex.acquire()
