@@ -19,7 +19,7 @@ class PowerThread(Thread):
         self._results = results
         self._pw_objects = pw_objects
         self._tasks = tasks
-        self._pw_id, self._pw, self._pw_stream = self.marshal_com()
+        self._pw_id, self._pw, self._pw_stream = None, None, None
         self.start()
 
     def marshal_com(self):
@@ -54,6 +54,8 @@ class PowerThread(Thread):
         pythoncom.CoUninitialize()
 
     def run(self):
+        # Can't do this before the thread starts running, otherwise marshalling is not successful
+        self._pw_id, self._pw, self._pw_stream = self.marshal_com()
         while True:
             try:
                 # Get task with non-blocking Queue call
