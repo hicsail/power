@@ -6,16 +6,14 @@ import pythoncom
 import queue
 from queue import Queue
 from threading import Thread
-from typing import Sequence, TypeVar
+from typing import Sequence, TypeVar, List, Callable
 
 
 class PowerThread(Thread):
     """
     A thread that runs indefinitely and uses a queue to obtain more tasks.
     """
-    T = TypeVar('T', Queue)
-
-    def __init__(self, tasks: Sequence[T], results: Queue, pw_objects: Queue, **kwargs):
+    def __init__(self, tasks: Sequence[Queue], results: Queue, pw_objects: Queue, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(1)
         self._results = results
