@@ -124,12 +124,9 @@ class Power:
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(PowerTask(f, callback, i, *args, **kwargs))
 
-    def poll(self, block=False):
         while True:
             try:
-                task, result = self._results.get(block=block)
-                if task.callback:
-                    task.callback(task, result)
+                task, result = self._results.get(True)
             except queue.Empty:
                 break
 
