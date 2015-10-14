@@ -6,13 +6,11 @@ import pythoncom
 import queue
 from queue import Queue
 from threading import Thread
-from typing import Sequence, TypeVar, List, Callable
+from typing import Sequence, List, Callable
 
 
 class PowerThread(Thread):
-    """
-    A thread that runs indefinitely and uses a queue to obtain more tasks.
-    """
+    """A thread that runs indefinitely and uses a queue to obtain more tasks."""
     def __init__(self, tasks: Sequence[Queue], results: Queue, pw_objects: Queue, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(1)
@@ -20,9 +18,14 @@ class PowerThread(Thread):
         self._pw_objects = pw_objects
         self._tasks = tasks
         self._pw_id, self._pw, self._pw_stream = None, None, None
+        self._dismissed = False
         self.start()
 
     def marshal_com(self):
+        """
+        Marshal the PowerWorld COM object to be used in this thread.
+        :return: Tuple with ID of COM object, the COM object itself and the stream referencing the COM object.
+        """
         # Enable COM object access in this thread, but not others
         pythoncom.CoInitialize()
         # Get tuple of id and stream
@@ -41,6 +44,7 @@ class PowerThread(Thread):
         return pw_id, pw, pw_stream
 
     def unmarshal_com(self):
+        """Unmarshal the PowerWorld COM object and return it to the queue for later usage."""
         # Revert stream back to start position
         self._pw_stream.Seek(0, 0)
         # Return stream back to queue
@@ -54,9 +58,12 @@ class PowerThread(Thread):
         pythoncom.CoUninitialize()
 
     def run(self):
+        """Continuously run thread, consuming new tasks as we go."""
         # Can't do this before the thread starts running, otherwise marshalling is not successful
         self._pw_id, self._pw, self._pw_stream = self.marshal_com()
         while True:
+            if self._dismissed:
+                break
             try:
                 # Get task with non-blocking Queue call
                 task = self._tasks[self._pw_id].get(False)
@@ -70,6 +77,10 @@ class PowerThread(Thread):
                 except:
                     # Or store exception message if something went wrong
                     self._results.put((task, sys.exc_info()))
+
+    def dismiss(self):
+        """Stop executing tasks and let the thread exit."""
+        self._dismissed = True
 
 
 class PowerTask:
