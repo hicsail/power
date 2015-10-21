@@ -13,7 +13,7 @@ import pythoncom
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 filename = current_dir + '\\power\\resources\\sampleCase.pwb'
-pw = Power(8)
+pw = Power(1)
 
 
 # The following function will determine if any errors are returned and print an appropriate message.
@@ -57,8 +57,7 @@ def callback(task, result):
 
 
 def multiprocess():
-    pw.add_task(threaded_func, '0-7', callback)
-    pw.poll(block=True)
+    pw.add_task(threaded_func, '0-7')
     pw.reset()
 
 

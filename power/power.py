@@ -84,9 +84,8 @@ class PowerThread(Thread):
 
 
 class PowerTask:
-    def __init__(self, f, callback, pw_id, *args, **kwargs):
+    def __init__(self, f, pw_id, *args, **kwargs):
         self.f = f
-        self.callback = callback
         self.pw_id = pw_id
         self.args = args
         self.kwargs = kwargs
@@ -120,10 +119,9 @@ class Power:
         for i in range(self._num_threads):
             self._threads.append(PowerThread(self._tasks, self._results, self._pw_objects))
 
-    def add_task(self, f: Callable, threads: str, callback: Callable, *args, **kwargs):
+    def add_task(self, f: Callable, threads: str, *args, **kwargs):
         for i in self._parse_thread_list(threads):
-            self._tasks[i].put(PowerTask(f, callback, i, *args, **kwargs))
-
+            self._tasks[i].put(PowerTask(f, i, *args, **kwargs))
         while True:
             try:
                 task, result = self._results.get(True)
