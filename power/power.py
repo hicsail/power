@@ -92,10 +92,19 @@ class PowerTask:
 
 
 class Power:
+    """
+    :type _num_threads: int
+    :type _pw_objects: Queue
+    :type _threads: list[PowerThread]
+    :type _dismissed_threads: list[PowerThread]
+    :type _tasks: list[Queue]
+    :type _results: Queue
+    """
     def __init__(self, _num_threads):
         self._num_threads = _num_threads
         self._pw_objects = Queue()
         self._threads = []
+        self._dismissed_threads = []
         self._tasks = [Queue() for _ in range(_num_threads)]
         self._results = Queue()
 
@@ -127,6 +136,11 @@ class Power:
                 task, result = self._results.get(True)
             except queue.Empty:
                 break
+
+    def dismiss(self, threads: str):
+        for i in self._parse_thread_list(threads):
+            self._threads[i].dismiss()
+            self._dismissed_threads.append(self._threads[i])
 
     def reset(self):
         for i in range(self._num_threads):
