@@ -13,7 +13,7 @@ import pythoncom
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 filename = current_dir + '\\power\\resources\\sampleCase.pwb'
-pw = Power(1)
+pw = Power(4)
 
 
 # The following function will determine if any errors are returned and print an appropriate message.
@@ -30,8 +30,8 @@ def create_pw_pool():
     pw.create_pw_pool()
 
 
-def threaded_func(com_id=None, auto_sim=None):
-    print('Starting new thread: %s' % com_id)
+def threaded_func(thread_id=None, auto_sim=None):
+    print('Starting new thread: %s' % thread_id)
     # initializePWCase
     check_result_for_error(auto_sim.OpenCase(filename), 'Case Open')
     check_result_for_error(auto_sim.RunScriptCommand('EnterMode(RUN)'), 'Enter Mode RUN')
@@ -57,7 +57,9 @@ def callback(task, result):
 
 
 def multiprocess():
-    pw.add_task(threaded_func, '0-7')
+    results = pw.add_task(threaded_func, '0-3')
+    print(results)
+    pw.dismiss_threads('0-3')
     pw.reset()
 
 
