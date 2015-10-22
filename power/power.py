@@ -17,7 +17,7 @@ class PowerThread(Thread):
         self._thread_id = i
         self._results = results
         self._pw_objects = pw_objects
-        self._tasks = tasks
+        self._tasks = task_list[i]
         self._pw, self._pw_stream = None, None
         self._dismissed = False
         self.start()
@@ -57,6 +57,11 @@ class PowerThread(Thread):
         self._pw, self._pw_stream = self.marshal_com()
         while True:
             if self._dismissed:
+                # If there were any tasks left, get rid of them
+                self._tasks.queue.clear()
+                self._tasks.all_tasks_done.notify_all()
+                self._tasks.unfinished_tasks = 0
+                self.unmarshal_com()
                 break
             try:
                 # Get task with non-blocking Queue call
@@ -67,6 +72,7 @@ class PowerThread(Thread):
                 try:
                     # Call task function and store results
                     result = task.f(*task.args, thread_id=self._thread_id, auto_sim=self._pw, **task.kwargs)
+                    self._tasks.task_done()
                     self._results.put((task, result))
                 except:
                     # Or store exception message if something went wrong
