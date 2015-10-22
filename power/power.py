@@ -169,9 +169,6 @@ class Power:
             pw = self._pw_objects[i]
             pythoncom.CoReleaseMarshalData(pw)
             pw = None
-            # Clean task queue
-            self._tasks[i].queue.clear()
-            self._tasks[i].all_tasks_done.notify_all()
         self._pw_objects = None
         self._tasks = None
         # TODO join threads first?
