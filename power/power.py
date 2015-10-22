@@ -10,7 +10,18 @@ from typing import Sequence, List, Callable
 
 
 class PowerThread(Thread):
-    """A thread that runs indefinitely and uses a queue to obtain more tasks."""
+    """
+    A thread that runs indefinitely and uses a queue to obtain more tasks.
+
+    :type _thread_id: int
+    :type _results: Queue
+    :type _pw_objects: list
+    :type _tasks_list: list[Queue]
+    :type _tasks: Queue
+    :type _pw: CDispatch
+    :type _pw_stream: PyIStream
+    :type _dismissed: bool
+    """
     def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(0)
