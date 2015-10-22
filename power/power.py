@@ -131,10 +131,15 @@ class Power:
             except queue.Empty:
                 break
 
-    def dismiss(self, threads: str):
+    def dismiss_threads(self, threads: str):
         for i in self._parse_thread_list(threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
+
+    def join_dismissed_threads(self):
+        for thread in self._dismissed_threads:
+            thread.join()
+        self._dismissed_threads = []
 
     def reset(self):
         for i in range(self._num_threads):
