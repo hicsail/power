@@ -13,7 +13,7 @@ class PowerThread(Thread):
     """A thread that runs indefinitely and uses a queue to obtain more tasks."""
     def __init__(self, tasks: Sequence[Queue], results: Queue, pw_objects: Queue, **kwargs):
         Thread.__init__(self, **kwargs)
-        self.setDaemon(1)
+        self.setDaemon(0)
         self._results = results
         self._pw_objects = pw_objects
         self._tasks = tasks
