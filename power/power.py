@@ -6,6 +6,7 @@ import pythoncom
 import queue
 from queue import Queue
 from threading import Thread
+from threading import Lock
 from typing import Sequence, List, Callable
 
 
@@ -16,18 +17,20 @@ class PowerThread(Thread):
     :type _thread_id: int
     :type _results: Queue
     :type _pw_objects: list
+    :type _lock: Lock
     :type _tasks_list: list[Queue]
     :type _tasks: Queue
     :type _pw: CDispatch
     :type _pw_stream: PyIStream
     :type _dismissed: bool
     """
-    def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, **kwargs):
+    def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, lock: Lock, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(0)
         self._thread_id = i
         self._results = results
         self._pw_objects = pw_objects
+        self._lock = lock
         self._tasks = task_list[i]
         self._pw, self._pw_stream = None, None
         self._dismissed = False
@@ -66,12 +69,16 @@ class PowerThread(Thread):
         self._pw, self._pw_stream = self.marshal_com()
         while True:
             if self._dismissed:
-                # If there were any tasks left, get rid of them
-                self._tasks.queue.clear()
-                self._tasks.all_tasks_done.notify_all()
-                self._tasks.unfinished_tasks = 0
-                self.unmarshal_com()
-                break
+                self._lock.acquire()
+                try:
+                    self.unmarshal_com()
+                    # If there were any tasks left, get rid of them
+                    self._tasks.queue.clear()
+                    self._tasks.all_tasks_done.notify_all()
+                    self._tasks.unfinished_tasks = 0
+                finally:
+                    self._lock.release()
+                    break
             try:
                 # Get task with non-blocking Queue call
                 task = self._tasks.get(False)
@@ -116,6 +123,7 @@ class Power:
         self._dismissed_threads = []
         self._tasks = [Queue() for _ in range(_num_threads)]
         self._results = Queue()
+        self._lock = Lock()
 
     def create_pw_pool(self):
         for i in range(self._num_threads):
@@ -135,7 +143,7 @@ class Power:
             self._pw_objects.append(pw_stream)
 
         for i in range(self._num_threads):
-            self._threads.append(PowerThread(i, self._tasks, self._results, self._pw_objects))
+            self._threads.append(PowerThread(i, self._tasks, self._results, self._pw_objects, self._lock))
 
     def add_task(self, f: Callable, threads: str, *args, **kwargs):
         requests = set()
