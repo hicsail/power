@@ -157,8 +157,6 @@ class Power:
         for i in self._parse_thread_list(threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
-
-    def join_dismissed_threads(self):
         for thread in self._dismissed_threads:
             thread.join()
         self._dismissed_threads = []
