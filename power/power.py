@@ -80,8 +80,10 @@ class PowerThread(Thread):
                     self._lock.release()
                     break
             try:
-                # Get task with non-blocking Queue call
-                task = self._tasks.get(False)
+                # Get task with blocking queue call
+                # This is much cheaper than running the while loop constantly. The timeout is meant for dismissing
+                # the thread, otherwise that check would never happen.
+                task = self._tasks.get(True, 2)
             except queue.Empty:
                 continue
             else:
