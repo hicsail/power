@@ -129,13 +129,19 @@ class Power:
             self._threads.append(PowerThread(i, self._tasks, self._results, self._pw_objects))
 
     def add_task(self, f: Callable, threads: str, *args, **kwargs):
+        requests = set()
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(PowerTask(f, i, *args, **kwargs))
+            requests.add(i)
+
         results = []
         while True:
+            if not requests:
                 break
             task, result = self._results.get(True)
             results.append(result)
+            requests.remove(task.thread_id)
+
         return results
 
     def dismiss_threads(self, threads: str):
