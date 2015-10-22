@@ -55,8 +55,6 @@ class PowerThread(Thread):
         """Unmarshal the PowerWorld COM object and return it to the queue for later usage."""
         # Revert stream back to start position
         self._pw_stream.Seek(0, 0)
-        # Return stream back to queue
-        self._pw_objects[self._thread_id] = self._pw_stream
         # Clean up COM reference
         self._pw = None
         # Indicate that no more COM objects will be called in this thread
