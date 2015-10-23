@@ -85,7 +85,7 @@ class PowerThread(Thread):
                 # Get task with blocking queue call
                 # This is much cheaper than running the while loop constantly. The timeout is meant for dismissing
                 # the thread, otherwise that check would never happen.
-                task = self._tasks.get(True, 2)
+                task = self._tasks.get(True, 1)
             except queue.Empty:
                 continue
             else:
