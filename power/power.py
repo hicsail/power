@@ -57,20 +57,24 @@ class Power:
         for i in range(self._num_threads):
             self._threads.append(_PowerThread(i, self._tasks, self._results, self._pw_objects, self._lock))
 
-    def add_task(self, f: Callable, threads: str, *args, **kwargs):
+    def add_task(self, f: Callable, threads=None, *args, **kwargs):
         """
         Blocking call to run a method in a number of threads. The return value of each thread will be aggregated into
         one list and returned from this method.
 
         :param f:   The method you want to call in a thread. To use the COM object in this thread, make sure you have a
                     named parameter auto_sim, set to None. The second named parameter available is thread_id.
-        :param threads: String of threads to run the method in. Follows comma and dash separated notation like '0-7'
-                        or '1,2,5-7'.
+        :param threads: Optional string of threads to run the method in. Follows comma and dash separated notation like
+                        '0-7' or '1,2,5-7'. If not provided, default to all threads.
         :param args: Any additional parameters you want to pass along
         :param kwargs: Any additional named parameters you want to pass along
         :return:    List of result tuples. The first element is the task you created with thread_id probably the most
                     useful value. The second element is the return value of your method
         """
+        # If not provided, default to all threads
+        if not threads:
+            threads = self._all_threads()
+
         requests = set()
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(_PowerTask(f, i, *args, **kwargs))
@@ -86,13 +90,18 @@ class Power:
 
         return results
 
-    def dismiss_threads(self, threads: str):
+    def dismiss_threads(self, threads=None):
         """
         Dismiss and join a number of threads. You will most likely want to call this method with '0-7' as the
         parameter to dismiss all threads.
 
-        :param threads: String of comma and dash separated values, for example '0-7' or '1,2,5-7'
+        :param threads: Optional string of comma and dash separated values, for example '0-7' or '1,2,5-7', defaults
+                        to all threads if not provided
         """
+        # If not provided, default to all threads
+        if not threads:
+            threads = self._all_threads()
+
         for i in self._parse_thread_list(threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
@@ -114,6 +123,14 @@ class Power:
         self._tasks = None
         # TODO force join threads first?
         self._threads = None
+
+    def _all_threads(self):
+        """
+        Get string notation for range of threads in the form of '0-self._num_threads'
+
+        :return: String representing all threads that can be parsed by _parse_thread_list()
+        """
+        return '0' if self._num_threads is 1 else '0-' + str(self._num_threads - 1)
 
     @staticmethod
     def _parse_thread_list(threads: str) -> List:

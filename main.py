@@ -53,9 +53,9 @@ def threaded_func(thread_id=None, auto_sim=None):
 
 
 def multiprocess():
-    results = pw.add_task(threaded_func, '0-3')
+    results = pw.add_task(threaded_func)
     print(results)
-    pw.dismiss_threads('0-3')
+    pw.dismiss_threads()
     pw.delete_pw_collection()
 
 
