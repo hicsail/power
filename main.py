@@ -60,7 +60,7 @@ def multiprocess():
     results = pw.add_task(threaded_func, '0-3')
     print(results)
     pw.dismiss_threads('0-3')
-    pw.reset()
+    pw.delete_pw_collection()
 
 
 benchmarks = []
