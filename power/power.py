@@ -39,7 +39,7 @@ class PowerThread(Thread):
     def marshal_com(self):
         """
         Marshal the PowerWorld COM object to be used in this thread.
-        :return: Tuple with ID of COM object, the COM object itself and the stream referencing the COM object.
+        :return: Tuple with the COM object itself and the stream referencing the COM object.
         """
         # Enable COM object access in this thread, but not others
         pythoncom.CoInitialize()
@@ -68,7 +68,9 @@ class PowerThread(Thread):
         # Can't do this before the thread starts running, otherwise marshalling is not successful
         self._pw, self._pw_stream = self.marshal_com()
         while True:
+            # Check if we're not trying to kill the thread
             if self._dismissed:
+                # If not using a lock here, the main thread will throw an exception when calling reset()
                 self._lock.acquire()
                 try:
                     self.unmarshal_com()
@@ -102,7 +104,15 @@ class PowerThread(Thread):
 
 
 class PowerTask:
-    def __init__(self, f, thread_id, *args, **kwargs):
+    """
+    A task to be executed by a thread. We don't pass functions directly to the thread but have this intermediate
+    structure to have the option of gaining more information later on. You can see which thread was responsible for
+    example.
+
+    :type f: Callable
+    :type thread_id: int
+    """
+    def __init__(self, f: Callable, thread_id: int, *args, **kwargs):
         self.f = f
         self.thread_id = thread_id
         self.args = args
@@ -111,23 +121,32 @@ class PowerTask:
 
 class Power:
     """
+    The main class to use
+
+    :param num_threads: Integer, amount of threads and COM objects you want to create.
     :type _num_threads: int
     :type _pw_objects: list
     :type _threads: list[PowerThread]
     :type _dismissed_threads: list[PowerThread]
     :type _tasks: list[Queue]
     :type _results: Queue
+    :type _lock: Lock
     """
-    def __init__(self, _num_threads):
-        self._num_threads = _num_threads
+    def __init__(self, num_threads: int):
+        self._num_threads = num_threads
         self._pw_objects = []
         self._threads = []
         self._dismissed_threads = []
-        self._tasks = [Queue() for _ in range(_num_threads)]
+        self._tasks = [Queue() for _ in range(num_threads)]
         self._results = Queue()
         self._lock = Lock()
 
-    def create_pw_pool(self):
+    def create_pw_collection(self):
+        """
+        Create the collection of COM objects, equal to the thread count defined earlier when creating the Power object.
+        All COM objects correspond to a specific thread and task queue.
+        You should call this before add_task()
+        """
         for i in range(self._num_threads):
             # Create COM object
             pw = win32com.client.Dispatch('pwrworld.SimulatorAuto')
@@ -148,6 +167,19 @@ class Power:
             self._threads.append(PowerThread(i, self._tasks, self._results, self._pw_objects, self._lock))
 
     def add_task(self, f: Callable, threads: str, *args, **kwargs):
+        """
+        Blocking call to run a method in a number of threads. The return value of each thread will be aggregated into
+        one list and returned from this method.
+
+        :param f:   The method you want to call in a thread. To use the COM object in this thread, make sure you have a
+                    named parameter auto_sim, set to None. The second named parameter available is thread_id.
+        :param threads: String of threads to run the method in. Follows comma and dash separated notation like '0-7'
+                        or '1,2,5-7'.
+        :param args: Any additional parameters you want to pass along
+        :param kwargs: Any additional named parameters you want to pass along
+        :return:    List of result tuples. The first element is the task you created with thread_id probably the most
+                    useful value. The second element is the return value of your method
+        """
         requests = set()
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(PowerTask(f, i, *args, **kwargs))
@@ -164,6 +196,12 @@ class Power:
         return results
 
     def dismiss_threads(self, threads: str):
+        """
+        Dismiss and join a number of threads. You will most likely want to call this method with '0-7' as the
+        parameter to dismiss all threads.
+
+        :param threads: String of comma and dash separated values, for example '0-7' or '1,2,5-7'
+        """
         for i in self._parse_thread_list(threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
@@ -171,7 +209,11 @@ class Power:
             thread.join()
         self._dismissed_threads = []
 
-    def reset(self):
+    def delete_pw_collection(self):
+        """
+        Releases the collection of COM objects and cleans up all tasks. This method should be called after
+        dismiss_threads()
+        """
         for i in range(self._num_threads):
             # Clean COM objects
             pw = self._pw_objects[i]
@@ -179,22 +221,15 @@ class Power:
             pw = None
         self._pw_objects = None
         self._tasks = None
-        # TODO join threads first?
+        # TODO force join threads first?
         self._threads = None
-
-        # The queue should be empty at this point, this is a fallback to forcefully clear the queue
-        # Doesn't kill COM objects though
-        # self._pw_objects.mutex.acquire()
-        # self._pw_objects.queue.clear()
-        # self._pw_objects.all_tasks_done.notify_all()
-        # self._pw_objects.unfinished_tasks = 0
-        # self._pw_objects.mutex.release()
 
     @staticmethod
     def _parse_thread_list(threads: str) -> List:
         """
         Parse string of comma and dash separated values into list that contains individual indexes.
         For example, '1,2,4-6' becomes [1,2,4,5,6]
+
         :param threads: String with comma and dash separated values
         :return: List with indexes of threads
         """

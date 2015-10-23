@@ -27,7 +27,7 @@ def check_result_for_error(sim_auto_output, message):
 
 def create_pw_pool():
     # Create 8 PowerWorld COM objects
-    pw.create_pw_pool()
+    pw.create_pw_collection()
 
 
 def threaded_func(thread_id=None, auto_sim=None):
