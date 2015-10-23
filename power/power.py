@@ -75,6 +75,7 @@ class Power:
         if not threads:
             threads = self._all_threads()
 
+        # Keeps track of the amount of tasks/requests currently running, so we now when all results have come in
         requests = set()
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(_PowerTask(f, i, *args, **kwargs))
@@ -82,10 +83,14 @@ class Power:
 
         results = []
         while True:
+            # Stop trying to get results if all tasks are handled
             if not requests:
                 break
+            # Task is returned to get to thread_id
+            # Block queue while waiting for results
             task, result = self._results.get(True)
             results.append((task, result))
+            # Remove thread id from requests to keep track of running tasks
             requests.remove(task.thread_id)
 
         return results
@@ -105,6 +110,7 @@ class Power:
         for i in self._parse_thread_list(threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
+        # Threads are not daemons so we get a chance to release COM apartment, needs join for this reason
         for thread in self._dismissed_threads:
             thread.join()
         self._dismissed_threads = []
