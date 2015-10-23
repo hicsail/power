@@ -190,7 +190,7 @@ class Power:
             if not requests:
                 break
             task, result = self._results.get(True)
-            results.append(result)
+            results.append((task, result))
             requests.remove(task.thread_id)
 
         return results

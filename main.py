@@ -26,7 +26,7 @@ def check_result_for_error(sim_auto_output, message):
 
 
 def create_pw_pool():
-    # Create 8 PowerWorld COM objects
+    # Create PowerWorld COM objects
     pw.create_pw_collection()
 
 
@@ -50,10 +50,6 @@ def threaded_func(thread_id=None, auto_sim=None):
 
     # Store the results along with the COM id
     return output_flattened
-
-
-def callback(task, result):
-    print("**** Result from request #%s: %r" % (task.pw_id, result))
 
 
 def multiprocess():
