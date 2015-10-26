@@ -166,7 +166,7 @@ class _PowerThread(Thread):
     :type _pw_stream: PyIStream
     :type _dismissed: bool
     """
-    def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, lock: Lock, **kwargs):
+    def __init__(self, i: int, task_list: Sequence[Queue(_PowerTask)], results: Queue, pw_objects: list, lock: Lock, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(0)
         self._thread_id = i
@@ -238,6 +238,7 @@ class _PowerThread(Thread):
                     self._results.put((task, result))
                 except:
                     # Or store exception message if something went wrong
+                    task.exception = True
                     self._results.put((task, sys.exc_info()))
 
     def dismiss(self):
@@ -253,9 +254,11 @@ class _PowerTask:
 
     :type f: Callable
     :type thread_id: int
+    :type exception: bool
     """
     def __init__(self, f: Callable, thread_id: int, *args, **kwargs):
         self.f = f
         self.thread_id = thread_id
+        self.exception = False
         self.args = args
         self.kwargs = kwargs
