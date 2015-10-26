@@ -57,7 +57,7 @@ class Power:
         for i in range(self._num_threads):
             self._threads.append(_PowerThread(i, self._tasks, self._results, self._pw_objects, self._lock))
 
-    def add_task(self, f: Callable, threads=None, *args, **kwargs):
+    def add_task(self, f: Callable, threads: str=None, *args, **kwargs):
         """
         Blocking call to run a method in a number of threads. The return value of each thread will be aggregated into
         one list and returned from this method.
