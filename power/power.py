@@ -98,40 +98,28 @@ class Power:
 
         return results
 
-    def dismiss_threads(self, threads=None):
+    def reset(self):
         """
-        Dismiss and join a number of threads. You will most likely want to call this method with '0-7' as the
-        parameter to dismiss all threads.
-
-        :param threads: Optional string of comma and dash separated values, for example '0-7' or '1,2,5-7', defaults
-                        to all threads if not provided
+        Cleanup all data: kills threads, clears tasks and releases COM references
         """
         # If not provided, default to all threads
-        if not threads:
-            threads = self._all_threads()
-
-        for i in self._parse_thread_list(threads):
+        for i in range(self._num_threads):
             self._threads[i].dismiss()
             self._dismissed_threads.append(self._threads[i])
         # Threads are not daemons so we get a chance to release COM apartment, needs join for this reason
         for thread in self._dismissed_threads:
             thread.join()
         self._dismissed_threads = []
+        self._tasks = None
+        self._threads = None
 
-    def delete_pw_collection(self):
-        """
-        Releases the collection of COM objects and cleans up all tasks. This method should be called after
-        dismiss_threads()
-        """
+        # Delete COM object references
         for i in range(self._num_threads):
             # Clean COM objects
             pw = self._pw_objects[i]
             pythoncom.CoReleaseMarshalData(pw)
             pw = None
         self._pw_objects = None
-        self._tasks = None
-        # TODO force join threads first?
-        self._threads = None
 
     def _all_threads(self):
         """

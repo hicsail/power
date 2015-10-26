@@ -55,8 +55,7 @@ def threaded_func(thread_id, auto_sim):
 def multiprocess():
     results = pw.add_task(f=threaded_func)
     print(results)
-    pw.dismiss_threads()
-    pw.delete_pw_collection()
+    pw.reset()
 
 
 benchmarks = []
