@@ -62,14 +62,17 @@ class Power:
         Blocking call to run a method in a number of threads. The return value of each thread will be aggregated into
         one list and returned from this method.
 
-        :param f:   The method you want to call in a thread. To use the COM object in this thread, make sure you have a
-                    named parameter auto_sim, set to None. The second named parameter available is thread_id.
-        :param threads: Optional string of threads to run the method in. Follows comma and dash separated notation like
-                        '0-7' or '1,2,5-7'. If not provided, default to all threads.
-        :param args: Any additional parameters you want to pass along
-        :param kwargs: Any additional named parameters you want to pass along
-        :return:    List of result tuples. The first element is the task you created with thread_id probably the most
-                    useful value. The second element is the return value of your method
+        Keyword arguments:
+        f -- The method you want to call in a thread. To use the COM object in this thread, make sure you have a
+            named parameter auto_sim, set to None. The second named parameter available is thread_id.
+        threads -- Optional string of threads to run the method in. Follows comma and dash separated notation like
+            '0-7' or '1,2,5-7'. If not provided, default to all threads.
+        args -- Any additional parameters you want to pass along
+        kwargs -- Any additional named parameters you want to pass along
+
+        :rtype: list[(_PowerTask, T)]
+        :return: List of result tuples. The first element is the task you created, containing the thread_id and
+            exception flag. The second element is the return value of your method
         """
         # If not provided, default to all threads
         if not threads:
@@ -134,6 +137,7 @@ class Power:
         """
         Get string notation for range of threads in the form of '0-self._num_threads'
 
+        :rtype: str
         :return: String representing all threads that can be parsed by _parse_thread_list()
         """
         return '0' if self._num_threads is 1 else '0-' + str(self._num_threads - 1)
@@ -145,6 +149,7 @@ class Power:
         For example, '1,2,4-6' becomes [1,2,4,5,6]
 
         :param threads: String with comma and dash separated values
+        :rtype: list
         :return: List with indexes of threads
         """
         # See https://stackoverflow.com/a/5705014/4573362
@@ -166,7 +171,7 @@ class _PowerThread(Thread):
     :type _pw_stream: PyIStream
     :type _dismissed: bool
     """
-    def __init__(self, i: int, task_list: Sequence[Queue(_PowerTask)], results: Queue, pw_objects: list, lock: Lock, **kwargs):
+    def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, lock: Lock, **kwargs):
         Thread.__init__(self, **kwargs)
         self.setDaemon(0)
         self._thread_id = i
@@ -251,6 +256,13 @@ class _PowerTask:
     A task to be executed by a thread. We don't pass functions directly to the thread but have this intermediate
     structure to have the option of gaining more information later on. You can see which thread was responsible for
     example.
+
+    Properties:
+    f -- The method to execute in a thread
+    thread_id -- The ID of the thread that will execute this task
+    exception -- Flag to indicate whether or not an exception happened when executing f
+    args -- Any additional parameters that have been passed along
+    kwargs -- Any additional named parameters that have been passed along
 
     :type f: Callable
     :type thread_id: int
