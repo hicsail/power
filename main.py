@@ -30,7 +30,7 @@ def create_pw_pool():
     pw.create_pw_collection()
 
 
-def threaded_func(thread_id=None, auto_sim=None):
+def threaded_func(thread_id, auto_sim):
     print('Starting new thread: %s' % thread_id)
     # initializePWCase
     check_result_for_error(auto_sim.OpenCase(filename), 'Case Open')
@@ -53,7 +53,7 @@ def threaded_func(thread_id=None, auto_sim=None):
 
 
 def multiprocess():
-    results = pw.add_task(threaded_func)
+    results = pw.add_task(f=threaded_func)
     print(results)
     pw.dismiss_threads()
     pw.delete_pw_collection()
