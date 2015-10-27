@@ -12,7 +12,45 @@ from typing import Sequence, List, Callable
 
 class Power:
     """
-    The main class to use
+    Power provides a multithreaded PowerWorld Simulator workflow.
+
+    Usage:
+
+    # Initiate with 4 threads
+    pw = Power(4)
+
+    # Create PowerWorld COM objects and threads
+    pw.create_pw_collection()
+
+    # Call method in all 4 threads, blocks until all results have arrived
+    results = pw.add_task(threaded_func)
+    # Call method in thread 0, 1 and 3, also blocking
+    results = pw.add_task(threaded_func, threads='0-1,3')
+
+    # You can pass as many arguments to the threaded function as you like
+    # Since the threads property is optional, you need to have None as the second parameter
+    results = pw.add_task(threaded_func, None, 'test', foo='bar')
+
+    # Or alternatively name your arguments for clarity, but then all should be named
+    results = pw.add_task(f=threaded_func, threads=None, foo='bar')
+
+    # Results is a list of tuples: first element is task, second is result.
+    # Task has thread_id and exception property
+    print(results[0][1])
+
+    # Kill all threads and COM object
+    pw.reset()
+
+    # Both thread_id and auto_sim have to present at all times
+    def threaded_func(thread_id, auto_sim):
+        print('Starting thread %s' % thread_id)
+
+    # Or with arguments
+    results = pw.add_task(threaded_func, None, 'foo', bar='bar')
+    # Unnamed arguments go in front, named ones can be anywhere else
+    def threaded_func(foo, thread_id, auto_sim, bar):
+        print('Starting thread %s' % thread_id)
+
 
     :param num_threads: Integer, amount of threads and COM objects you want to create.
     :type _num_threads: int
