@@ -5,9 +5,7 @@ Credits
 Development Lead
 ----------------
 
-
+* Frederick Jansen <fjansen@bu.edu>
 
 Contributors
 ------------
-
-* Frederick Jansen <fjansen@bu.edu>
