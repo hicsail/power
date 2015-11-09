@@ -41,11 +41,11 @@ setup(
     install_requires=[
     ],
     cmdclass={'test': PyTest},
-    license="Commercial",
+    license="MIT",
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
-        'License :: Commercial',
+        'License :: MIT',
         'Natural Language :: English',
         "Programming Language :: Python :: 3"
     ],
