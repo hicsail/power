@@ -10,7 +10,7 @@ from setuptools.command.test import test as TestCommand
 import power
 import sys
 
-with open('README.rst') as readme_file:
+with open('README.md') as readme_file:
     readme = readme_file.read()
 
 
@@ -32,7 +32,7 @@ setup(
     long_description=readme,
     author="Boston University",
     author_email='fjansen@bu.edu',
-    url='https://github.com/frederickjansen/power',
+    url='https://github.com/Hariri-Institute-SAIL/power',
     packages=[
         'power',
     ],
@@ -47,7 +47,7 @@ setup(
         'Intended Audience :: Developers',
         'License :: Commercial',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2"
+        "Programming Language :: Python :: 3"
     ],
     test_suite='tests',
     tests_require=['pytest'],
