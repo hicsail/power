@@ -199,7 +199,7 @@ class _PowerThread(Thread):
     """
     def __init__(self, i: int, task_list: Sequence[Queue], results: Queue, pw_objects: list, lock: Lock, **kwargs):
         Thread.__init__(self, **kwargs)
-        self.setDaemon(0)
+        self.daemon = False
         self._thread_id = i
         self._results = results
         self._pw_objects = pw_objects
