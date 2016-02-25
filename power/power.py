@@ -62,6 +62,8 @@ class Power:
     :type _lock: Lock
     """
     def __init__(self, num_threads: int):
+        if num_threads < 1:
+            raise ValueError('Power should be instantiated with at least 1 thread')
         self._num_threads = num_threads
         self._pw_objects = []
         self._threads = []
