@@ -1,5 +1,4 @@
 import win32com.client
-from win32com.client import VARIANT
 
 import sys
 import pythoncom
@@ -68,7 +67,7 @@ class Power:
         self._pw_objects = []
         self._threads = []
         self._dismissed_threads = []
-        self._tasks = [Queue() for _ in range(num_threads)]
+        self._tasks = [Queue() for _ in range(num_threads)]  # _ is a throwaway variable name that isn't used elsewhere
         self._results = Queue()
         self._lock = Lock()
 
@@ -103,9 +102,9 @@ class Power:
         one list and returned from this method.
 
         Keyword arguments:
-        f -- The method you want to call in a thread. To use the COM object in this thread, make sure you have a
-            named parameter auto_sim, set to None. The second named parameter available is thread_id.
-        threads -- Optional string of threads to run the method in. Follows comma and dash separated notation like
+        :param f: The method you want to call in a thread. To use the COM object in this thread, make sure you have a
+            named parameter simAuto, set to None. The second named parameter available is thread_id.
+        :param threads: Optional string of threads to run the method in. Follows comma and dash separated notation like
             '0-7' or '1,2,5-7'. If not provided, default to all threads.
         args -- Any additional parameters you want to pass along
         kwargs -- Any additional named parameters you want to pass along
@@ -118,7 +117,7 @@ class Power:
         if not threads:
             threads = self._all_threads()
 
-        # Keeps track of the amount of tasks/requests currently running, so we now when all results have come in
+        # Keeps track of the amount of tasks/requests currently running, so we know when all results have come in
         requests = set()
         for i in self._parse_thread_list(threads):
             self._tasks[i].put(_PowerTask(f, i, *args, **kwargs))
