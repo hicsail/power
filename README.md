@@ -1,9 +1,3 @@
-# Power Grid
+# Power
 
-Power Grid description
-
-* TODO
-
-## Features
-
-* TODO
+A multi-threaded Python library for [PowerWorld](http://www.powerworld.com/).
