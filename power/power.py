@@ -1,12 +1,15 @@
 import win32com.client
 
 import sys
+import traceback
 import pythoncom
 import queue
 from queue import Queue
 from threading import Thread
 from threading import Lock
 from typing import Sequence, List, Callable
+import gevent
+from power.com import PowerSocketServer
 
 
 class Power:
@@ -67,7 +70,7 @@ class Power:
         self._pw_objects = []
         self._threads = []
         self._dismissed_threads = []
-        self._tasks = [Queue() for _ in range(num_threads)]  # _ is a throwaway variable name that isn't used elsewhere
+        self._tasks = [Queue() for _ in range(num_threads)] # _ is a throwaway variable name that isn't used elsewhere
         self._results = Queue()
         self._lock = Lock()
 
@@ -113,29 +116,34 @@ class Power:
         :return: List of result tuples. The first element is the task you created, containing the thread_id and
             exception flag. The second element is the return value of your method
         """
-        # If not provided, default to all threads
-        if not threads:
-            threads = self._all_threads()
+        # Yield control back to PowerSocketServer to handle any new incoming messages
+        # Has to be bigger than 0 since that's not enough time for context switching
+        gevent.sleep(0.1)
+        # Block when application is paused
+        with PowerSocketServer.sem:
+            # If not provided, default to all threads
+            if not threads:
+                threads = self._all_threads()
 
-        # Keeps track of the amount of tasks/requests currently running, so we know when all results have come in
-        requests = set()
-        for i in self._parse_thread_list(threads):
-            self._tasks[i].put(_PowerTask(f, i, *args, **kwargs))
-            requests.add(i)
+            # Keeps track of the amount of tasks/requests currently running, so we know when all results have come in
+            requests = set()
+            for i in self._parse_thread_list(threads):
+                self._tasks[i].put(_PowerTask(f, i, *args, **kwargs))
+                requests.add(i)
 
-        results = []
-        while True:
-            # Stop trying to get results if all tasks are handled
-            if not requests:
-                break
-            # Task is returned to get to thread_id
-            # Block queue while waiting for results
-            task, result = self._results.get(True)
-            results.append((task, result))
-            # Remove thread id from requests to keep track of running tasks
-            requests.remove(task.thread_id)
+            results = []
+            while True:
+                # Stop trying to get results if all tasks are handled
+                if not requests:
+                    break
+                # Task is returned to get to thread_id
+                # Block queue while waiting for results
+                task, result = self._results.get(True)
+                results.append((task, result))
+                # Remove thread id from requests to keep track of running tasks
+                requests.remove(task.thread_id)
 
-        return results
+            return results
 
     def reset(self):
         """
@@ -270,6 +278,8 @@ class _PowerThread(Thread):
                     self._results.put((task, result))
                 except:
                     # Or store exception message if something went wrong
+                    print(sys.exc_info())
+                    print(traceback.print_exc())
                     task.exception = True
                     self._results.put((task, sys.exc_info()))
 
