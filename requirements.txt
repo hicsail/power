@@ -1,3 +1,5 @@
-numpy==1.10.0
+gevent==1.1.1
+gevent-websocket==0.9.5
+PyDispatcher==2.0.5
 pypiwin32==219
 typing==3.5.0
