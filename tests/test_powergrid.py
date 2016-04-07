@@ -10,8 +10,6 @@ Tests for `power` module.
 
 import unittest
 
-from power import power
-
 
 class TestPowerGrid(unittest.TestCase):
 
