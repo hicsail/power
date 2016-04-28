@@ -189,7 +189,7 @@ class Power:
         """
         # See https://stackoverflow.com/a/5705014/4573362
         ranges = (x.split("-") for x in threads.split(","))
-        return [i for r in ranges for i in range(int(r[0]), int(r[-1]) + 1)]
+        return set([i for r in ranges for i in range(int(r[0]), int(r[-1]) + 1)])
 
 
 class _PowerThread(Thread):
